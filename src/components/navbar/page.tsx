@@ -8,7 +8,7 @@ export default function Navbar() {
   return (
     <nav className="w-full bg-black-600 text-white py-4 px-6 shadow-md">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">MyApp</h1>
+        <h1 className="text-xl font-bold"><a href="/">MyApp</a></h1>
 
     
         <button
@@ -21,7 +21,7 @@ export default function Navbar() {
   
         <ul className="hidden md:flex items-center gap-6 text-sm font-medium">
           <li className="hover:text-blue-200 cursor-pointer">
-            <a href="/page">Home</a>
+            <a href="/">Home</a>
           </li>
           <li className="hover:text-blue-200 cursor-pointer">Features</li>
           <li className="hover:text-blue-200 cursor-pointer">About</li>
