@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { socket } from '../lib/socket';
+// We don't need to emit socket events here anymore, just navigation
+// But if you use socket.id for userId generation, keep the import
+import { socket } from '../lib/socket'; 
 
 export default function Home() {
   const [roomCode, setRoomCode] = useState('');
@@ -36,13 +38,8 @@ export default function Home() {
       alert('Please generate a room code first');
       return;
     }
-
-    const roomId = roomCode;
-    const userId = socket.id || crypto.randomUUID();
-
-    socket.emit('userJoined', { userId, roomId });
-
-    router.push(`/room/${roomId}`);
+    // FIX: Just navigate. The Room page will handle the socket connection.
+    router.push(`/room/${roomCode}`);
   };
 
   const handleJoinRoom = () => {
@@ -50,12 +47,8 @@ export default function Home() {
       alert('Please enter a room code');
       return;
     }
-
-    const roomId = joinCode.trim();
-    const userId = socket.id || crypto.randomUUID();
-
-    socket.emit('userJoined', { userId, roomId });
-    router.push(`/room/${roomId}`);
+    // FIX: Just navigate. The Room page will handle the socket connection.
+    router.push(`/room/${joinCode.trim()}`);
   };
 
   return (
