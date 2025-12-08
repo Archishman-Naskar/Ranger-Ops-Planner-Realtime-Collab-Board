@@ -2,7 +2,6 @@
 import { createServer } from 'node:http';
 import next from 'next';
 import { Server } from 'socket.io';
-// Ensure this path matches your file structure exactly
 import { userJoin, userLeave, getUsers } from './src/utils/user.js'; 
 
 const dev = process.env.NODE_ENV !== 'production';
@@ -19,42 +18,88 @@ app.prepare().then(() => {
     cors: { origin: '*' },
   });
 
-  const whiteboards = {};
+  // CHANGED: Store history and step per room instead of just one image
+  // Structure: { roomId: { history: [img1, img2], step: 1 } }
+  const roomHistory = {};
 
   io.on('connection', (socket) => {
     console.log('socket connected', socket.id);
 
     socket.on('userJoined', ({ userId, roomId }) => {
-      // 1. Prepare data (keys match user.js now)
-      const userData = { id: userId, roomId, socketId:socket.id }; 
-      
-      // 2. Add user to store
+      const userData = { id: userId, roomId, socketId: socket.id };
       userJoin(userData);
       socket.join(roomId);
 
-      // 3. FIX: Get the FILTERED list for this specific room
       const roomUsers = getUsers(roomId);
 
-      // 4. Send success + list to the NEW user
-      socket.emit("userIsJoined", { success: true, users: roomUsers });
+      // 1. Initialize Room History if it doesn't exist
+      if (!roomHistory[roomId]) {
+        roomHistory[roomId] = {
+            history: [],
+            step: -1
+        };
+      }
 
-      // 5. Send list to EVERYONE ELSE in the room
+      socket.emit("userIsJoined", { success: true, users: roomUsers });
       socket.broadcast.to(roomId).emit("allUsers", roomUsers);
 
-      // 6. Send existing drawing
-      const roomImage = whiteboards[roomId] || null;
-      socket.emit('draw', { roomId, image: roomImage });
+      // 2. Send the current image from Server History (if exists)
+      const room = roomHistory[roomId];
+      let currentImage = null;
+      if (room.step >= 0 && room.history[room.step]) {
+          currentImage = room.history[room.step];
+      }
+      
+      socket.emit('draw', { roomId, image: currentImage });
       
       console.log('userJoined', userId, roomId);
     });
 
     socket.on('draw', ({ roomId, image }) => {
-      whiteboards[roomId] = image;
-      // Broadcast to others in the room
-      socket.to(roomId).emit('draw', { roomId, image });
+      // 3. SERVER SIDE HISTORY LOGIC (Moved from client)
+      if (!roomHistory[roomId]) return;
+      const room = roomHistory[roomId];
+
+      // Slice logic: remove "future" redo states if we draw something new
+      const newStep = room.step + 1;
+      room.history = room.history.slice(0, newStep);
+      
+      // Push new image
+      room.history.push(image);
+      room.step = newStep;
+
+      // Broadcast to EVERYONE (including sender) to stay in sync
+      io.to(roomId).emit('draw', { roomId, image });
+    });
+
+    // 4. Handle Undo Request
+    socket.on('undo', ({ roomId }) => {
+        if (!roomHistory[roomId]) return;
+        const room = roomHistory[roomId];
+
+        if (room.step > 0) {
+            room.step -= 1;
+            const prevImage = room.history[room.step];
+            io.to(roomId).emit('draw', { roomId, image: prevImage });
+        } else if (room.step === 0) {
+             // Optional: Clear board if we undo the very first stroke
+             room.step = -1;
+             io.to(roomId).emit('draw', { roomId, image: null }); // clear
+        }
+    });
+
+    // 5. Handle Redo Request
+    socket.on('redo', ({ roomId }) => {
+        if (!roomHistory[roomId]) return;
+        const room = roomHistory[roomId];
+
+        if (room.step < room.history.length - 1) {
+            room.step += 1;
+            const nextImage = room.history[room.step];
+            io.to(roomId).emit('draw', { roomId, image: nextImage });
+        }
     });
     
-    // Handle disconnect
     socket.on('disconnect', () => {
         const user = userLeave(socket.id);
         if(user){
