@@ -5,12 +5,12 @@ import { useParams } from 'next/navigation';
 import { socket } from '../../lib/socket';
 import Board from './Board';
 
-// Types for better safety
 type Position = { x: number; y: number };
 type BoardData = {
   id: number | string;
   name: string;
   position: Position;
+  content: string; 
 };
 
 export default function RoomPage() {
@@ -33,7 +33,7 @@ export default function RoomPage() {
   // --- UI State ---
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
   
-  // BOARDS: Replaces LocalStorage with State synced via Socket
+  // BOARDS
   const [boards, setBoards] = useState<BoardData[]>([]); 
   const boardRefs = useRef<any>({});
   
@@ -44,17 +44,15 @@ export default function RoomPage() {
   const [newBoardTitle, setNewBoardTitle] = useState("");
 
   // ==========================================
-  // 1. SOCKET & DATA SYNC LOGIC (NEW)
+  // 1. SOCKET & DATA SYNC LOGIC
   // ==========================================
 
   useEffect(() => {
     if (!roomId) return;
     
-    // Identity Setup
     if (!userIdRef.current) userIdRef.current = socket.id || `user-${Date.now()}`;
     const userId = userIdRef.current;
 
-    // Join Room
     socket.emit('userJoined', { userId, roomId });
 
     // --- CANVAS HANDLERS ---
@@ -76,21 +74,17 @@ export default function RoomPage() {
       }
     };
 
-    // --- USER LIST HANDLER ---
     const handleUserList = (data: any) => {
       const userList = Array.isArray(data) ? data : data.users;
       if (userList) setUsers(userList);
     };
 
-    // --- BOARD HANDLERS (The New Logic) ---
+    // --- BOARD HANDLERS ---
     
-    // A. Sync all boards (on join)
     const handleBoardsSync = (serverBoards: BoardData[]) => {
-      // Ensure we map server data correctly if needed, otherwise just set
       setBoards(serverBoards || []);
     };
 
-    // B. Add Board (someone else added one)
     const handleBoardAdd = (newBoard: BoardData) => {
       setBoards((prev) => {
         if (prev.find(b => b.id === newBoard.id)) return prev;
@@ -98,24 +92,21 @@ export default function RoomPage() {
       });
     };
 
-    // C. Update Board (someone moved/renamed one)
     const handleBoardUpdate = (updatedBoard: BoardData) => {
       setBoards((prev) => 
         prev.map((b) => (b.id === updatedBoard.id ? updatedBoard : b))
       );
     };
 
-    // D. Delete Board
+    // This handles deletion when OTHER users delete a board, or when server confirms
     const handleBoardDelete = (boardId: string | number) => {
         setBoards((prev) => prev.filter(b => b.id !== boardId));
     };
 
-    // Register Listeners
     socket.on('draw', handleDraw);
     socket.on('userIsJoined', handleUserList);
     socket.on('allUsers', handleUserList);
     
-    // New Board Listeners
     socket.on('boards:sync', handleBoardsSync);
     socket.on('board:add', handleBoardAdd);
     socket.on('board:update', handleBoardUpdate);
@@ -134,7 +125,7 @@ export default function RoomPage() {
 
 
   // ==========================================
-  // 2. CANVAS DRAWING LOGIC (EXISTING)
+  // 2. CANVAS DRAWING LOGIC
   // ==========================================
 
   const emitCanvasImage = () => {
@@ -250,7 +241,7 @@ export default function RoomPage() {
 
 
   // ==========================================
-  // 3. BOARD MANAGEMENT LOGIC (UPDATED)
+  // 3. BOARD MANAGEMENT LOGIC
   // ==========================================
 
   const determineNewPosition = () => {
@@ -288,15 +279,12 @@ export default function RoomPage() {
     const newBoard: BoardData = {
       id: Date.now(),
       name: newBoardTitle,
-      position: determineNewPosition()
+      position: determineNewPosition(),
+      content: '<p>Hello World! 🌎</p>'
     };
 
-    // 1. Optimistic Update (Immediate Feedback)
     setBoards((prev) => [...prev, newBoard]);
-
-    // 2. Emit to Server
     socket.emit('board:add', { roomId, boardData: newBoard });
-
     setNewBoardTitle("");
     setIsModalOpen(false);
   };
@@ -307,11 +295,7 @@ export default function RoomPage() {
     if (!board) return;
 
     const updatedBoard = { ...board, position: newPosition };
-
-    // 1. Optimistic Update
     setBoards((prev) => prev.map((b) => (b.id === id ? updatedBoard : b)));
-
-    // 2. Emit to Server
     socket.emit('board:update', { roomId, boardData: updatedBoard });
   };
 
@@ -321,15 +305,31 @@ export default function RoomPage() {
     if (!board) return;
 
     const updatedBoard = { ...board, name: newName };
-
-    // 1. Optimistic Update
     setBoards((prev) => prev.map((b) => (b.id === id ? updatedBoard : b)));
-
-    // 2. Emit to Server
     socket.emit('board:update', { roomId, boardData: updatedBoard });
   };
 
-  // --- DRAG LOGIC (Preserved but attached to Socket) ---
+  // --- UPDATE BOARD CONTENT ---
+  const updateBoardContent = (id: number | string, newContent: string) => {
+    const board = boards.find(b => b.id === id);
+    if (!board || board.content === newContent) return;
+
+    const updatedBoard = { ...board, content: newContent };
+    
+    setBoards((prev) => prev.map((b) => (b.id === id ? updatedBoard : b)));
+    socket.emit('board:update', { roomId, boardData: updatedBoard });
+  };
+
+  // --- DELETE BOARD (NEW FUNCTION) ---
+  const emitDeleteBoard = (id: number | string) => {
+    // 1. Emit to server
+    socket.emit('board:delete', { roomId, boardId: id });
+    
+    // 2. Optimistic update (remove locally immediately)
+    setBoards((prev) => prev.filter(b => b.id !== id));
+  };
+
+  // --- DRAG LOGIC ---
   const handleDragStart = (board: BoardData, e: React.MouseEvent) => {
     e.preventDefault();
     const { id } = board;
@@ -345,7 +345,12 @@ export default function RoomPage() {
 
     const handleMouseMove = (e: MouseEvent) => {
       const newX = e.clientX - offsetX - containerRect.left;
-      const newY = e.clientY - offsetY - containerRect.top;
+      let newY = e.clientY - offsetY - containerRect.top;
+
+      if (newY < 0) {
+        newY = 0;
+      }
+
       boardRef.style.left = `${newX}px`;
       boardRef.style.top = `${newY}px`;
     };
@@ -361,11 +366,9 @@ export default function RoomPage() {
       };
 
       if (checkForOverlap(id)) {
-        // Revert visually if overlap
         boardRef.style.left = `${startPos.x}px`;
         boardRef.style.top = `${startPos.y}px`;
       } else {
-        // Commit change via Socket
         updateBoardPosition(id, newPosition);
       }
     };
@@ -415,7 +418,7 @@ export default function RoomPage() {
   // ==========================================
   return (
     <div className="bg-gray-50 min-h-screen flex flex-col font-sans">
-
+      
       {/* HEADER */}
       <header className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm z-[70] shrink-0">
         <div className="flex flex-col">
@@ -503,11 +506,15 @@ export default function RoomPage() {
             <div key={board.id} className="pointer-events-auto absolute">
               <Board
                 ref={boardRefs.current[board.id] ? boardRefs.current[board.id] : (boardRefs.current[board.id] = createRef())}
-                id={board.id}
+                id={board.id} 
                 name={board.name}
                 initialPos={board.position}
+                content={board.content}
+                onContentChange={(newContent) => updateBoardContent(board.id, newContent)}
                 onMouseDown={(e: any) => handleDragStart(board, e)}
                 onRename={(newName: string) => updateBoardName(board.id, newName)}
+                // --- PASSING THE DELETE FUNCTION ---
+                onDelete={() => emitDeleteBoard(board.id)} 
               />
             </div>
           ))}
