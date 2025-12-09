@@ -17,12 +17,14 @@ app.prepare().then(() => {
     cors: { origin: '*' },
   });
 
-  // 1. EXISTING: Handles the Canvas Drawing (Undo/Redo paths)
+  // 1. Canvas History
   const roomHistory = {};
 
-  // 2. NEW: Handles the "Boards" (Sticky notes/Elements)
-  // Structure: { roomId: [ { id: 1, x: 100, y: 100, text: "hello" }, ... ] }
+  // 2. Boards History (Text/Sticky Notes)
   const boardHistory = {};
+
+  // 3. NEW: Images History (Separate Storage)
+  const imageHistory = {};
 
   io.on('connection', (socket) => {
     console.log('socket connected', socket.id);
@@ -35,18 +37,16 @@ app.prepare().then(() => {
       const roomUsers = getUsers(roomId);
 
       // --- A. INITIALIZE STATES ---
-      if (!roomHistory[roomId]) {
-        roomHistory[roomId] = { history: [], step: -1 };
-      }
+      if (!roomHistory[roomId]) roomHistory[roomId] = { history: [], step: -1 };
+      if (!boardHistory[roomId]) boardHistory[roomId] = []; 
       
-      if (!boardHistory[roomId]) {
-        boardHistory[roomId] = []; // Start with empty array of boards
-      }
+      // Initialize Image Array
+      if (!imageHistory[roomId]) imageHistory[roomId] = [];
 
       socket.emit("userIsJoined", { success: true, users: roomUsers });
       socket.broadcast.to(roomId).emit("allUsers", roomUsers);
 
-      // --- B. SYNC CANVAS (Existing Logic) ---
+      // --- B. SYNC CANVAS ---
       const room = roomHistory[roomId];
       let currentImage = null;
       if (room.step >= 0 && room.history[room.step]) {
@@ -54,14 +54,16 @@ app.prepare().then(() => {
       }
       socket.emit('draw', { roomId, image: currentImage });
 
-      // --- C. SYNC BOARDS (New Logic) ---
-      // Send the current list of boards to the user who just joined
+      // --- C. SYNC BOARDS ---
       socket.emit('boards:sync', boardHistory[roomId]);
+
+      // --- D. NEW: SYNC IMAGES ---
+      socket.emit('images:sync', imageHistory[roomId]);
       
       console.log('userJoined', userId, roomId);
     });
 
-    // --- CANVAS EVENTS (Existing Logic) ---
+    // --- CANVAS EVENTS ---
     socket.on('draw', ({ roomId, image }) => {
       if (!roomHistory[roomId]) return;
       const room = roomHistory[roomId];
@@ -95,42 +97,52 @@ app.prepare().then(() => {
         }
     });
 
-    // --- NEW: BOARD MANAGEMENT EVENTS ---
-
-    // 1. Add a new Board
+    // --- BOARD MANAGEMENT EVENTS (Text) ---
     socket.on('board:add', ({ roomId, boardData }) => {
         if (!boardHistory[roomId]) boardHistory[roomId] = [];
-        
-        // Add to server memory
         boardHistory[roomId].push(boardData);
-        
-        // Broadcast to everyone (including sender) to render it
         io.to(roomId).emit('board:add', boardData);
     });
 
-    // 2. Update an existing Board (moved, resized, text changed)
     socket.on('board:update', ({ roomId, boardData }) => {
         if (!boardHistory[roomId]) return;
-
-        // Find and update the specific board in the array
         const index = boardHistory[roomId].findIndex(b => b.id === boardData.id);
         if (index !== -1) {
             boardHistory[roomId][index] = boardData;
-            
-            // Broadcast the update so everyone sees the board move/change
             io.to(roomId).emit('board:update', boardData);
         }
     });
 
-    // 3. Delete a Board
     socket.on('board:delete', ({ roomId, boardId }) => {
         if (!boardHistory[roomId]) return;
-
-        // Remove from server memory
         boardHistory[roomId] = boardHistory[roomId].filter(b => b.id !== boardId);
-
-        // Tell everyone to remove it from their screen
         io.to(roomId).emit('board:delete', boardId);
+    });
+
+    // --- NEW: IMAGE MANAGEMENT EVENTS (Separate) ---
+    
+    // 1. Add Image
+    socket.on('image:add', ({ roomId, imageData }) => {
+        if (!imageHistory[roomId]) imageHistory[roomId] = [];
+        imageHistory[roomId].push(imageData);
+        io.to(roomId).emit('image:add', imageData);
+    });
+
+    // 2. Update Image
+    socket.on('image:update', ({ roomId, imageData }) => {
+        if (!imageHistory[roomId]) return;
+        const index = imageHistory[roomId].findIndex(img => img.id === imageData.id);
+        if (index !== -1) {
+            imageHistory[roomId][index] = imageData;
+            io.to(roomId).emit('image:update', imageData);
+        }
+    });
+
+    // 3. Delete Image
+    socket.on('image:delete', ({ roomId, imageId }) => {
+        if (!imageHistory[roomId]) return;
+        imageHistory[roomId] = imageHistory[roomId].filter(img => img.id !== imageId);
+        io.to(roomId).emit('image:delete', imageId);
     });
     
     socket.on('disconnect', () => {
