@@ -29,6 +29,7 @@ export default function Home() {
     if (roomCode) {
       await navigator.clipboard.writeText(roomCode);
       setCopied(true);
+      setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -65,7 +66,13 @@ export default function Home() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Room Code
                 </label>
-                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                
+                {/* FIX APPLIED BELOW: 
+                   Changed 'sm:flex-row' to 'xl:flex-row'. 
+                   This keeps the elements stacked vertically on Tablets/Laptops 
+                   where the 2-column grid makes the card too narrow for a horizontal layout.
+                */}
+                <div className="flex flex-col xl:flex-row gap-2 items-stretch">
                   <input
                     type="text"
                     value={roomCode}
@@ -73,18 +80,21 @@ export default function Home() {
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm md:text-base"
                     readOnly
                   />
-                  <button
-                    onClick={handleGenerate}
-                    className="px-4 py-2 bg-blue-600 text-white text-sm md:text-base font-semibold rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    Generate
-                  </button>
-                  <button
-                    onClick={handleCopy}
-                    className="px-4 py-2 bg-white text-red-600 text-sm md:text-base font-semibold rounded-md border-2 border-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
+                  {/* Added flex-row for buttons so they sit side-by-side when the parent is vertical */}
+                  <div className="flex flex-row gap-2">
+                    <button
+                      onClick={handleGenerate}
+                      className="flex-1 xl:flex-none px-4 py-2 bg-blue-600 text-white text-sm md:text-base font-semibold rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    >
+                      Generate
+                    </button>
+                    <button
+                      onClick={handleCopy}
+                      className="flex-1 xl:flex-none px-4 py-2 bg-white text-red-600 text-sm md:text-base font-semibold rounded-md border-2 border-red-600 hover:bg-red-50 transition-colors whitespace-nowrap"
+                    >
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
                 </div>
               </div>
               <button

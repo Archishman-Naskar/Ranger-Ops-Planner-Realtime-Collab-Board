@@ -36,7 +36,7 @@ app.prepare().then(() => {
 
       const roomUsers = getUsers(roomId);
 
-      // --- A. INITIALIZE STATES ---
+      // INITIALIZE STATES
       if (!roomHistory[roomId]) roomHistory[roomId] = { history: [], step: -1 };
       if (!boardHistory[roomId]) boardHistory[roomId] = []; 
       
@@ -46,7 +46,7 @@ app.prepare().then(() => {
       socket.emit("userIsJoined", { success: true, users: roomUsers });
       socket.broadcast.to(roomId).emit("allUsers", roomUsers);
 
-      // --- B. SYNC CANVAS ---
+      //  SYNC CANVAS
       const room = roomHistory[roomId];
       let currentImage = null;
       if (room.step >= 0 && room.history[room.step]) {
@@ -54,16 +54,16 @@ app.prepare().then(() => {
       }
       socket.emit('draw', { roomId, image: currentImage });
 
-      // --- C. SYNC BOARDS ---
+      //SYNC BOARDS
       socket.emit('boards:sync', boardHistory[roomId]);
 
-      // --- D. NEW: SYNC IMAGES ---
+      //  NEW: SYNC IMAGES 
       socket.emit('images:sync', imageHistory[roomId]);
       
       console.log('userJoined', userId, roomId);
     });
 
-    // --- CANVAS EVENTS ---
+    // CANVAS EVENTS
     socket.on('draw', ({ roomId, image }) => {
       if (!roomHistory[roomId]) return;
       const room = roomHistory[roomId];
@@ -97,7 +97,7 @@ app.prepare().then(() => {
         }
     });
 
-    // --- BOARD MANAGEMENT EVENTS (Text) ---
+    //BOARD MANAGEMENT EVENTS 
     socket.on('board:add', ({ roomId, boardData }) => {
         if (!boardHistory[roomId]) boardHistory[roomId] = [];
         boardHistory[roomId].push(boardData);
@@ -119,7 +119,7 @@ app.prepare().then(() => {
         io.to(roomId).emit('board:delete', boardId);
     });
 
-    // --- NEW: IMAGE MANAGEMENT EVENTS (Separate) ---
+    //  NEW: IMAGE MANAGEMENT EVENTS (Separate)
     
     // 1. Add Image
     socket.on('image:add', ({ roomId, imageData }) => {
