@@ -1,0 +1,69 @@
+📦src
+ ┣ 📂app
+ ┃ ┣ 📂api
+ ┃ ┃ ┗ 📂users
+ ┃ ┃ ┃ ┣ 📂login
+ ┃ ┃ ┃ ┃ ┗ 📜route.ts
+ ┃ ┃ ┃ ┣ 📂logout
+ ┃ ┃ ┃ ┃ ┗ 📜route.ts
+ ┃ ┃ ┃ ┣ 📂signup
+ ┃ ┃ ┃ ┃ ┗ 📜route.ts
+ ┃ ┃ ┃ ┗ 📂verifyEmail
+ ┃ ┃ ┃ ┃ ┗ 📜route.ts
+ ┃ ┣ 📂home
+ ┃ ┃ ┣ 📜layout.tsx
+ ┃ ┃ ┗ 📜page.tsx
+ ┃ ┣ 📂lib
+ ┃ ┃ ┗ 📜socket.ts
+ ┃ ┣ 📂login
+ ┃ ┃ ┗ 📜page.tsx
+ ┃ ┣ 📂profile
+ ┃ ┃ ┣ 📂[name]
+ ┃ ┃ ┃ ┗ 📜page.tsx
+ ┃ ┃ ┗ 📜layout.tsx
+ ┃ ┣ 📂room
+ ┃ ┃ ┗ 📂[roomId]
+ ┃ ┃ ┃ ┣ 📂components
+ ┃ ┃ ┃ ┃ ┣ 📜Board.tsx
+ ┃ ┃ ┃ ┃ ┣ 📜Canvas.tsx
+ ┃ ┃ ┃ ┃ ┣ 📜FileInput.tsx
+ ┃ ┃ ┃ ┃ ┣ 📜IBoard.tsx
+ ┃ ┃ ┃ ┃ ┣ 📜ItemRenderer.tsx
+ ┃ ┃ ┃ ┃ ┣ 📜RoomHeader.tsx
+ ┃ ┃ ┃ ┃ ┣ 📜RoomModal.tsx
+ ┃ ┃ ┃ ┃ ┗ 📜Toolbar.tsx
+ ┃ ┃ ┃ ┣ 📂hooks
+ ┃ ┃ ┃ ┃ ┣ 📜useBoardManagement.ts
+ ┃ ┃ ┃ ┃ ┣ 📜useCanvasDrawing.ts
+ ┃ ┃ ┃ ┃ ┣ 📜useDragLogic.ts
+ ┃ ┃ ┃ ┃ ┣ 📜useImageManagement.ts
+ ┃ ┃ ┃ ┃ ┗ 📜useRoomSocket.ts
+ ┃ ┃ ┃ ┣ 📂types
+ ┃ ┃ ┃ ┃ ┗ 📜index.ts
+ ┃ ┃ ┃ ┣ 📂utils
+ ┃ ┃ ┃ ┃ ┣ 📜canvasUtils.ts
+ ┃ ┃ ┃ ┃ ┣ 📜imageUtils.ts
+ ┃ ┃ ┃ ┃ ┗ 📜positionUtils.ts
+ ┃ ┃ ┃ ┣ 📜page.tsx
+ ┃ ┃ ┃ ┣ 📜page_old.tsx
+ ┃ ┃ ┃ ┗ 📜RoomClient.tsx
+ ┃ ┣ 📂signup
+ ┃ ┃ ┗ 📜page.tsx
+ ┃ ┣ 📂test
+ ┃ ┃ ┗ 📜page.tsx
+ ┃ ┣ 📂verifyEmail
+ ┃ ┃ ┗ 📂[hashedToken]
+ ┃ ┃ ┃ ┗ 📜page.tsx
+ ┃ ┣ 📜favicon.ico
+ ┃ ┣ 📜globals.css
+ ┃ ┣ 📜layout.tsx
+ ┃ ┗ 📜page.tsx
+ ┣ 📂dbConfig
+ ┃ ┗ 📜dbConfig.ts
+ ┣ 📂helpers
+ ┃ ┗ 📜mailer.ts
+ ┣ 📂models
+ ┃ ┗ 📜userModels.ts
+ ┣ 📂utils
+ ┃ ┗ 📜user.js
+ ┗ 📜proxy.ts
